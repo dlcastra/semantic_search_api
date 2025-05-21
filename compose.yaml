@@ -1,0 +1,25 @@
+version: '3.9'
+
+services:
+  server:
+    container_name: server
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - qdrant
+
+  qdrant:
+    container_name: qdrant_db
+    image: qdrant/qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_storage:/qdrant/storage
+
+volumes:
+  qdrant_storage:
