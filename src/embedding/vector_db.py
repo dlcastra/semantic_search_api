@@ -1,12 +1,10 @@
 import uuid
 from typing import Any
 
-from qdrant_client import QdrantClient
 from qdrant_client.models import VectorParams, Distance, PointStruct
 
 from src.core.settings import settings
-
-client = QdrantClient(host=settings.QDRANT_HOST, port=settings.QDRANT_HTTP_PORT, grpc_port=settings.QDRANT_GRPC_PORT)
+from src.clients.qdrant import client
 
 
 def collection_exists() -> bool:
@@ -41,10 +39,11 @@ def add_embedding(vector: list[float], payload: dict[str, Any]) -> None:
 def search_similar(vector: list[float], limit: int = 5):
     """Search for similar embeddings in the Qdrant collection."""
 
-    search_result = client.query_points(
+    search_result = client.search(
         collection_name=settings.QDRANT_COLLECTION_NAME,
         query_vector=vector,
         limit=limit,
+        with_payload=True,
     )
 
     return search_result
