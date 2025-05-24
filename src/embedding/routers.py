@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from src.clients.azure_openai import client
+from src.clients.azure_openai import embedding_client
 from src.core.settings import settings
 from src.embedding.vector_db import create_collection, search_similar, add_embedding
 
@@ -15,7 +15,7 @@ class TextInput(BaseModel):
 
 @router.post("/add-embedding")
 def add_embedding_router(text_input: TextInput):
-    response = client.embeddings.create(input=[text_input.text], model=settings.AZURE_OPENAI_DEPLOYMENT_NAME)
+    response = embedding_client.embeddings.create(input=[text_input.text], model=settings.AZURE_OPENAI_DEPLOYMENT_NAME)
 
     embedding = response.data[0].embedding
     add_embedding(vector=embedding, payload={"text": text_input.text})
@@ -25,7 +25,7 @@ def add_embedding_router(text_input: TextInput):
 
 @router.post("/search-embedding")
 def search_text_embedding_router(text_input: TextInput) -> dict:
-    response = client.embeddings.create(input=[text_input.text], model=settings.AZURE_OPENAI_DEPLOYMENT_NAME)
+    response = embedding_client.embeddings.create(input=[text_input.text], model=settings.AZURE_OPENAI_DEPLOYMENT_NAME)
 
     embedding = response.data[0].embedding
     search_result = search_similar(vector=embedding, limit=5)
