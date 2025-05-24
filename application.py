@@ -1,11 +1,22 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from starlette.responses import JSONResponse
 from starlette.status import HTTP_422_UNPROCESSABLE_ENTITY
 
+from src.core.settings import settings
 from src.embedding import routers as embedding_routers
+from src.embedding.vector_db import create_collection
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await create_collection(vector_size=settings.QDRANT_VECTOR_SIZE)
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 app.include_router(embedding_routers.router, prefix="/api/v1/embedding", tags=["embedding"])
 
 

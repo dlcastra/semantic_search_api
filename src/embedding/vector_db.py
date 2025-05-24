@@ -7,16 +7,16 @@ from src.core.settings import settings
 from src.clients.qdrant import client
 
 
-def collection_exists() -> bool:
+async def collection_exists() -> bool:
     """Check if the collection exists in Qdrant."""
 
-    return client.collection_exists(settings.QDRANT_COLLECTION_NAME)
+    return await client.collection_exists(settings.QDRANT_COLLECTION_NAME)
 
 
-def create_collection(vector_size: int) -> None:
+async def create_collection(vector_size: int) -> None:
     """Create a collection in Qdrant if it does not exist."""
 
-    if collection_exists():
+    if await collection_exists():
         return
 
     client.create_collection(
@@ -28,18 +28,18 @@ def create_collection(vector_size: int) -> None:
     )
 
 
-def add_embedding(vector: list[float], payload: dict[str, Any]) -> None:
+async def add_embedding(vector: list[float], payload: dict[str, Any]) -> None:
     """Add an embedding to the Qdrant collection."""
 
     point_id = str(uuid.uuid4())
     point = PointStruct(id=point_id, vector=vector, payload=payload)
-    client.upsert(collection_name=settings.QDRANT_COLLECTION_NAME, points=[point])
+    await client.upsert(collection_name=settings.QDRANT_COLLECTION_NAME, points=[point])
 
 
-def search_similar(vector: list[float], limit: int = 5):
+async def search_similar(vector: list[float], limit: int = 5):
     """Search for similar embeddings in the Qdrant collection."""
 
-    search_result = client.search(
+    search_result = await client.search(
         collection_name=settings.QDRANT_COLLECTION_NAME,
         query_vector=vector,
         limit=limit,
