@@ -161,3 +161,4 @@ cython_debug/
 
 # Alembic migration
 migrations/versions/*.py
+!migrations/versions/__init__.py
