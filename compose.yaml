@@ -6,7 +6,7 @@ services:
     build:
       context: .
     working_dir: /app
-    command: uvicorn application:app --host 0.0.0.0 --reload
+    command: uvicorn application:app --host 0.0.0.0 --port 8000 --reload
     ports:
       - "8000:8000"
     env_file:
@@ -15,6 +15,8 @@ services:
       - .:/app
     depends_on:
       - qdrant
+      - db
+      - redis
     restart: on-failure
     networks:
       - app_network
@@ -46,6 +48,39 @@ services:
     networks:
       - app_network
 
+  pgadmin:
+    container_name: pgadmin
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin@admin.com
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    networks:
+      - app_network
+
+  migrator:
+    container_name: migrator
+    build:
+      context: .
+    depends_on:
+      db:
+        condition: service_healthy
+    command: alembic upgrade head
+    volumes:
+      - .:/app
+    environment:
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=docker_embedding_db
+      - DOCKER_ENV=true
+    networks:
+      - app_network
+
   qdrant:
     container_name: qdrant_db
     image: qdrant/qdrant
@@ -54,6 +89,20 @@ services:
       - "6334:6334"
     volumes:
       - qdrant_storage:/qdrant/storage
+    networks:
+      - app_network
+
+  redis:
+    container_name: redis
+    image: redis:7.0-alpine
+    restart: always
+    expose:
+      - "6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - app_network
 
