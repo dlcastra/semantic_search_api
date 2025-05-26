@@ -19,7 +19,7 @@ async def create_collection(vector_size: int) -> None:
     if await collection_exists():
         return
 
-    client.create_collection(
+    await client.create_collection(
         collection_name=settings.QDRANT_COLLECTION_NAME,
         vectors_config=VectorParams(
             size=vector_size,
