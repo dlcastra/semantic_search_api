@@ -2,8 +2,9 @@ from datetime import timedelta, datetime
 
 from fastapi import HTTPException
 from fastapi.requests import Request
-from jose import jwt
+from jose import jwt, JWTError
 from passlib.context import CryptContext
+from starlette import status
 
 from src.core.constants import SESSION_AGE
 from src.core.settings import settings
@@ -27,11 +28,41 @@ class AuthUtils:
         return jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
 
 
-async def get_current_user_from_session(request: Request):
-    session_id = request.session.get("session_id")
-    if not session_id:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    return session_id
+async def get_user_from_cookies(request: Request):
+    token = request.cookies.get("access_token")
+    if not token:
+        return None
+
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms="HS256")
+        return {"auth_type": "session", "user": payload}
+    except JWTError:
+        return None
+
+
+async def get_user_from_header(request: Request):
+    token = request.headers.get("Authorization")
+    if not token or not token.startswith("Bearer "):
+        return None
+
+    token = token.split(" ")[1]
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms="HS256")
+        return {"auth_type": "token", "user": payload}
+    except JWTError:
+        return None
+
+
+async def get_current_user(request: Request):
+    user = await get_user_from_cookies(request)
+    if user:
+        return user
+
+    user = await get_user_from_header(request)
+    if user:
+        return user
+
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
 
 
 async def store_session(redis, user_id, session_id):

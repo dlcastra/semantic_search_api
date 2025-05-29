@@ -1,6 +1,7 @@
 import uuid
 from typing import Any
 
+from qdrant_client import models
 from qdrant_client.models import VectorParams, Distance, PointStruct
 
 from src.core.settings import settings
@@ -47,3 +48,17 @@ async def search_similar(vector: list[float], limit: int = 5):
     )
 
     return search_result
+
+
+async def get_all_user_embeddings(user_id: str, limit: int = 50) -> list[PointStruct]:
+    points = await client.scroll(
+        collection_name=settings.QDRANT_COLLECTION_NAME,
+        scroll_filter=models.Filter(
+            must=[models.FieldCondition(key="user_id", match=models.MatchValue(value=user_id))]
+        ),
+        limit=limit,
+        with_payload=True,
+        with_vectors=False,
+    )
+
+    return points
