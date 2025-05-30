@@ -1,6 +1,4 @@
 import asyncio
-import uuid
-from io import BytesIO
 from typing import Optional
 
 import tiktoken
@@ -10,9 +8,9 @@ from pydantic import BaseModel
 
 from src.auth.utils import get_current_user
 from src.clients.azure_openai import embedding_client
-from src.core.settings import settings, logger
-from src.embedding.services import get_text_extractor_service, get_text_tokenization_service
-from src.embedding.vector_db import search_similar, add_embedding, get_all_user_embeddings
+from src.core.settings import settings
+from src.embedding.services import get_text_extractor_service, get_embedding_service
+from src.embedding.vector_db import search_similar, get_all_user_embeddings
 
 router = APIRouter()
 
@@ -32,38 +30,16 @@ async def add_embedding_router(
     """Add an embedding for the provided text input."""
 
     tokenizer = tiktoken.encoding_for_model("gpt-3.5-turbo")
-
     text_extractor = await get_text_extractor_service()
-    text_tokenization = await get_text_tokenization_service(tokenizer, max_tokens=50)
-    user_id = auth_payload.get("user").get("sub")
-    text_chunks = []
-
-    if file:
-        file_bytes = await file.read()
-        file_stream = BytesIO(file_bytes)
-        text_from_file, is_extracted = await text_extractor.extract_text(file.filename, file_stream)
-
-        if not is_extracted:
-            logger.error(f"Failed to extract text from file: {file.filename}")
-            return {"status": "error", "message": "Failed to extract text from file."}
-
-        text_chunks = await text_tokenization.chunk_text(text_from_file)
-
-    if text:
-        text_chunks = await text_tokenization.chunk_text(text)
-
-    response = await asyncio.to_thread(
-        embedding_client.embeddings.create,
-        input=text_chunks,
-        model=settings.AZURE_OPENAI_DEPLOYMENT_NAME,
+    embedding_service = await get_embedding_service(
+        embedding_client=embedding_client,
+        text_extractor=text_extractor,
+        tokenizer=tokenizer,
+        max_tokens=50,
     )
 
-    for idx, (chunk, embedding_data) in enumerate(zip(text_chunks, response.data)):
-        embedding = embedding_data.embedding
-        point_id = str(uuid.uuid4())
-        await add_embedding(vector=embedding, payload={"id": point_id, "user_id": user_id, "text": chunk})
-
-    return {"status": "success", "chunks_saved": text_chunks}
+    user_id = auth_payload.get("user").get("sub")
+    return await embedding_service.create_embeddings(user_id, text, file)
 
 
 @router.post("/search-embedding", dependencies=[Depends(get_current_user)])
