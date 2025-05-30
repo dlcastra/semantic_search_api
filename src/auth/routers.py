@@ -57,11 +57,9 @@ async def login(response: Response, user_data: UserLogin, db: AsyncSession = Dep
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     session_id = str(uuid.uuid4())
-    logger.info(f"user {user.id} type: {type(user.id)}; logged in with session ID: {session_id}")
     token = AuthUtils.create_access_token(user.id)
 
     await store_session(redis, user.id, session_id)
-
     response.set_cookie(key="access_token", value=token, httponly=True, samesite="lax", secure=False)
 
     return {"message": "Logged in", "access_token": token}
