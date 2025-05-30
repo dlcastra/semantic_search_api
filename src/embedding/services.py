@@ -1,3 +1,4 @@
+import re
 from io import BytesIO
 
 import fitz
@@ -32,8 +33,7 @@ class TextExtractorService:
 
         return "Unsupported file type", False
 
-    @staticmethod
-    async def _extract_text_from_txt(file_bytes: BytesIO) -> tuple[str, bool] | tuple[None, bool]:
+    async def _extract_text_from_txt(self, file_bytes: BytesIO) -> tuple[str, bool] | tuple[None, bool]:
         """
         Extracts text from a text file.
 
@@ -45,13 +45,16 @@ class TextExtractorService:
 
         try:
             logger.info(f"Extracting text from TXT file")
-            return file_bytes.getvalue().decode("utf-8"), True
+
+            result = file_bytes.read().decode("utf-8")
+            cleaned_text = await self.clean_text(result)
+
+            return cleaned_text, True
         except Exception as e:
             logger.error(f"TextExtractorService {str(e)}")
             return None, False
 
-    @staticmethod
-    async def _extract_text_from_docx(file_bytes: BytesIO) -> tuple[str, bool] | tuple[None, bool]:
+    async def _extract_text_from_docx(self, file_bytes: BytesIO) -> tuple[str, bool] | tuple[None, bool]:
         """
         Extracts text from a DOCX file bytes using the `python-docx` library.
 
@@ -65,15 +68,15 @@ class TextExtractorService:
             logger.info(f"Starting text extraction from DOCX file")
             doc = Document(file_bytes)
             result = " ".join([para.text for para in doc.paragraphs if para.text.strip()])
-
             logger.info(f"Text extracted successfully")
-            return result, True
+
+            cleaned_text = await self.clean_text(result)
+            return cleaned_text, True
         except Exception as e:
             logger.error(f"TextExtractorService {str(e)}")
             return None, False
 
-    @staticmethod
-    async def _extract_text_from_pdf(file_bytes: BytesIO) -> tuple[str, bool] | tuple[None, bool]:
+    async def _extract_text_from_pdf(self, file_bytes: BytesIO) -> tuple[str, bool] | tuple[None, bool]:
         """
         Extracts text from a PDF file bytes using the `PyMuPDF` library.
 
@@ -89,10 +92,20 @@ class TextExtractorService:
             result = " ".join([page.get_text() for page in doc.pages()])
 
             logger.info(f"Text extracted successfully")
-            return result, True
+            cleaned_text = await self.clean_text(result)
+            return cleaned_text, True
         except Exception as e:
             logger.error(f"TextExtractorService {str(e)}")
             return None, False
+
+    @staticmethod
+    async def clean_text(text) -> str:
+        cleaned = re.sub(r"[\n\r\t\b]", " ", text)
+        cleaned = re.sub(r"\s+", " ", cleaned)
+        cleaned = cleaned.strip()
+
+        logger.info(f"Cleaning text from {len(cleaned)} characters")
+        return cleaned
 
 
 class SentenceAwareChunker:
