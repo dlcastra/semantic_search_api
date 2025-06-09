@@ -1,9 +1,9 @@
 import logging
 
-from redis.asyncio import Redis
-from pydantic_settings import BaseSettings
 from colorama import Fore, Style
 from decouple import config
+from pydantic_settings import BaseSettings
+from redis.asyncio import Redis
 
 
 class ModelSettings(BaseSettings):
@@ -42,13 +42,19 @@ class PostgresSettings(BaseSettings):
         )
 
 
+class AzureStorageSettings(BaseSettings):
+    AZURE_CONNECTION_STRING: str = config("AZURE_CONNECTION_STRING")
+    CONTAINER_NAME: str = config("CONTAINER_NAME")
+
+
 class AppSettings(BaseSettings):
     PORT: int = 8000
 
 
-class Settings(ModelSettings, QdrantSettings, PostgresSettings, AppSettings):
+class Settings(AppSettings, AzureStorageSettings, ModelSettings, PostgresSettings, QdrantSettings):
     DEBUG: bool = False
     SECRET_KEY: str = config("SECRET_KEY")
+    NLTK_DATA_DIR: str = "/app/nltk_data"
     DCOCKER_ENV: str = config("DOCKER_ENV", default="false")
 
 

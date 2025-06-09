@@ -9,11 +9,13 @@ from src.core.settings import settings
 from src.embedding import routers as embedding_routers
 from src.auth import routers as auth_routers
 from src.embedding.vector_db import create_collection
+import nltk
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await create_collection(vector_size=settings.QDRANT_VECTOR_SIZE)
+    nltk.download("punkt_tab", download_dir=settings.NLTK_DATA_DIR)
     yield
 
 

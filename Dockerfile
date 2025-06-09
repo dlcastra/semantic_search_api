@@ -16,9 +16,8 @@ ARG UID=10001
 RUN adduser \
     --disabled-password \
     --gecos "" \
-    --home "/nonexistent" \
-    --shell "/sbin/nologin" \
-    --no-create-home \
+    --home "/home/appuser" \
+    --shell "/bin/bash" \
     --uid "${UID}" \
     appuser
 
@@ -28,6 +27,10 @@ RUN adduser \
 # into this layer.
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+RUN mkdir -p /app/nltk_data
+ENV NLTK_DATA=/app/nltk_data
+RUN python -m nltk.downloader -d /app/nltk_data punkt
 
 # Switch to the non-privileged user to run the application.
 USER appuser
